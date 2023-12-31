@@ -149,36 +149,35 @@ func graph(
 	p.X.Label.Text = "t"
 	p.Y.Label.Text = "Temp"
 
+	var vs []interface{}
 	{
-		var profilePts plotter.XYs
+		vs = append(vs, "profile")
+		var pts plotter.XYs
 		for _, d := range schedule {
-			profilePts = append(profilePts, plotter.XY{
+			pts = append(pts, plotter.XY{
 				d.T().Seconds(),
 				d.Val,
 			})
 		}
-		err := plotutil.AddLines(p,
-			"profile", profilePts,
-		)
-		noErr(err)
+		vs = append(vs, pts)
 	}
 
 	for i, tc := range tcs {
-		var dataPts plotter.XYs
+		vs = append(vs, tc.Description)
+		pts := plotter.XYs{}
 		for _, d := range data[i] {
-			dataPts = append(dataPts, plotter.XY{
+			pts = append(pts, plotter.XY{
 				d.T().Seconds(),
 				d.Val,
 			})
 		}
-
-		err := plotutil.AddLines(p,
-			tc.Description, dataPts,
-		)
-		noErr(err)
+		vs = append(vs, pts)
 	}
 
-	err := p.Save(16*vg.Inch, 4*vg.Inch, "cook.svg")
+	err := plotutil.AddLines(p, vs...)
+	noErr(err)
+
+	err = p.Save(16*vg.Inch, 4*vg.Inch, "cook.svg")
 	noErr(err)
 }
 
