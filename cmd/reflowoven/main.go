@@ -116,17 +116,25 @@ func graph(schedule Schedule, data []Point) {
 	p.X.Label.Text = "t"
 	p.Y.Label.Text = "Temp"
 
-	var pts plotter.XYs
+	var profilePts plotter.XYs
+	for _, d := range schedule {
+		profilePts = append(profilePts, plotter.XY{
+			d.T().Seconds(),
+			d.Val,
+		})
+	}
 
+	var dataPts plotter.XYs
 	for _, d := range data {
-		pts = append(pts, plotter.XY{
+		dataPts = append(dataPts, plotter.XY{
 			d.T().Seconds(),
 			d.Val,
 		})
 	}
 
 	err := plotutil.AddLinePoints(p,
-		"temp", pts,
+		"profile", profilePts,
+		"temp", dataPts,
 	)
 	noErr(err)
 
