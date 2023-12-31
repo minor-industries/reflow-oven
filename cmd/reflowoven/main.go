@@ -18,18 +18,24 @@ import (
 	"time"
 )
 
-var profile Schedule = Schedule{
+var profile = NewScheduleRelativeDurations([]Point{
 	{Duration(0 * time.Second), 25},
+	{Duration(40 * time.Second), 45}, // preheat the element
 	{Duration(30 * time.Second), 100},
-	{Duration(120 * time.Second), 150},
-	{Duration(150 * time.Second), 183},
-	{Duration(210 * time.Second), 235},
-	{Duration(240 * time.Second), 183},
-	{Duration(300 * time.Second), 25},
-	{Duration(330 * time.Second), 25},
-}
+	{Duration(90 * time.Second), 150},
+	{Duration(30 * time.Second), 183},
+	{Duration(60 * time.Second), 235},
+	{Duration(30 * time.Second), 235},
+	{Duration(25 * time.Second), 183},
+	{Duration(60 * time.Second), 25},
+	{Duration(30 * time.Second), 25},
+})
 
 func main() {
+	for _, p := range profile {
+		fmt.Println(p.T().Seconds(), p.Val)
+	}
+
 	profile = profile.PrePend(Point{Duration(40 * time.Second), 45})
 	profile = profile.PrePend(Point{Duration(0 * time.Second), 45})
 

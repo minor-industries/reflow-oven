@@ -15,6 +15,18 @@ func (p *Point) T() time.Duration {
 
 type Schedule []Point
 
+func NewScheduleRelativeDurations(points []Point) Schedule {
+	var result Schedule
+
+	cur := time.Duration(0)
+	for _, p := range points {
+		cur += p.T()
+		result = append(result, Point{Duration(cur), p.Val})
+	}
+
+	return result
+}
+
 func (sc Schedule) Val(t time.Duration) float64 {
 	n := len(sc)
 	i := n - 1
