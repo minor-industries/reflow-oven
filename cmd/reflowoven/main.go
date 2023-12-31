@@ -57,8 +57,10 @@ func main() {
 		fmt.Println(s)
 	}
 
-	tc0 := NewThermocouple(log, bus, 0x60, "probe0")
-	tc1 := NewThermocouple(log, bus, 0x60, "probe1")
+	tcs := []*Thermocouple{
+		NewThermocouple(log, bus, 0x60, "probe0"),
+		NewThermocouple(log, bus, 0x67, "probe1"),
+	}
 
 	cook := gpioreg.ByName("GPIO16")
 	if cook == nil {
@@ -69,7 +71,7 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	go monitorTemp(ctx, &wg, t0, []*Thermocouple{tc0, tc1}, cook)
+	go monitorTemp(ctx, &wg, t0, tcs, cook)
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
@@ -100,7 +102,7 @@ func monitorTemp(
 
 			target := profile.Val(t)
 			parts := []string{
-				fmt.Sprintf("t=%3.2f", t),
+				fmt.Sprintf("t=%3.2f", t.Seconds()),
 				fmt.Sprintf("target=%3.2f", target),
 			}
 
