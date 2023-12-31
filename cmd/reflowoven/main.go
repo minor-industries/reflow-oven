@@ -1,11 +1,16 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"os/signal"
 	"periph.io/x/conn/v3/gpio"
 	"periph.io/x/conn/v3/gpio/gpioreg"
 	"periph.io/x/conn/v3/i2c/i2creg"
 	"periph.io/x/host/v3"
+	"sync"
+	"syscall"
 	"time"
 )
 
@@ -41,27 +46,55 @@ func main() {
 		panic("no gpio")
 	}
 
-	go monitorTemp(t0, tc, cook)
+	ctx, cancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
+	wg.Add(1)
 
-	select {}
+	go monitorTemp(ctx, &wg, t0, tc, cook)
+
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
+
+	go func() {
+		<-signals
+		cancel()
+	}()
+
+	wg.Wait()
 }
 
-func monitorTemp(t0 time.Time, tc *Thermocouple, cook gpio.PinIO) {
+func monitorTemp(
+	ctx context.Context,
+	wg *sync.WaitGroup,
+	t0 time.Time,
+	tc *Thermocouple,
+	cook gpio.PinIO,
+) {
 	ticker := time.NewTicker(250 * time.Millisecond)
-	for range ticker.C {
-		t1 := time.Now()
-		t := t1.Sub(t0)
 
-		target := profile.Val(t)
+	for {
+		select {
+		case <-ticker.C:
+			t1 := time.Now()
+			t := t1.Sub(t0)
 
-		temp, err := tc.Temperature()
-		noErr(err)
+			target := profile.Val(t)
 
-		on := target > temp
-		fmt.Println(t, target, temp, on)
+			temp, err := tc.Temperature()
+			noErr(err)
 
-		err = cook.Out(gpio.Level(on))
-		noErr(err)
+			on := target > temp
+			fmt.Println(t, target, temp, on)
+
+			err = cook.Out(gpio.Level(on))
+			noErr(err)
+		case <-ctx.Done():
+			ticker.Stop()
+			_ = cook.Out(gpio.Low)
+			fmt.Println("done")
+			wg.Done()
+			return
+		}
 	}
 }
 
