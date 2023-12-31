@@ -58,8 +58,8 @@ func main() {
 	}
 
 	tcs := []*Thermocouple{
-		NewThermocouple(log, bus, 0x60, "probe0"),
-		NewThermocouple(log, bus, 0x67, "probe1"),
+		NewThermocouple(log, bus, 0x67, "probe0"),
+		NewThermocouple(log, bus, 0x60, "probe1"),
 	}
 
 	cook := gpioreg.ByName("GPIO16")
