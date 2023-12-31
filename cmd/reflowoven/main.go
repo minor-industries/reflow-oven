@@ -9,7 +9,21 @@ import (
 	"time"
 )
 
+var profile Schedule = Schedule{
+	{Duration(0 * time.Second), 25},
+	{Duration(30 * time.Second), 100},
+	{Duration(120 * time.Second), 150},
+	{Duration(150 * time.Second), 183},
+	{Duration(210 * time.Second), 235},
+	{Duration(240 * time.Second), 183},
+	{Duration(300 * time.Second), 25},
+	{Duration(330 * time.Second), 25},
+}
+
 func main() {
+	t0 := time.Now()
+	fmt.Println(t0)
+
 	_, err := host.Init()
 	noErr(err)
 
@@ -22,33 +36,32 @@ func main() {
 
 	tc := NewThermocouple(log, bus, 0x60)
 
-	go monitorTemp(tc)
-
 	cook := gpioreg.ByName("GPIO16")
 	if cook == nil {
 		panic("no gpio")
 	}
 
-	for {
-		err := cook.Out(gpio.High)
-		noErr(err)
+	go monitorTemp(t0, tc, cook)
 
-		time.Sleep(500 * time.Millisecond)
-
-		err = cook.Out(gpio.Low)
-		noErr(err)
-
-		time.Sleep(4500 * time.Millisecond)
-	}
+	select {}
 }
 
-func monitorTemp(tc *Thermocouple) {
+func monitorTemp(t0 time.Time, tc *Thermocouple, cook gpio.PinIO) {
 	ticker := time.NewTicker(250 * time.Millisecond)
 	for range ticker.C {
-		t, err := tc.Temperature()
+		t1 := time.Now()
+		t := t1.Sub(t0)
+
+		target := profile.Val(t)
+
+		temp, err := tc.Temperature()
 		noErr(err)
 
-		fmt.Println(t)
+		on := target > temp
+		fmt.Println(t, target, temp, on)
+
+		err = cook.Out(gpio.Level(on))
+		noErr(err)
 	}
 }
 
