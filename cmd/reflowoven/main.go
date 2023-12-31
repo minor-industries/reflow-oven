@@ -13,6 +13,7 @@ import (
 	"periph.io/x/conn/v3/gpio/gpioreg"
 	"periph.io/x/conn/v3/i2c/i2creg"
 	"periph.io/x/host/v3"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -56,7 +57,8 @@ func main() {
 		fmt.Println(s)
 	}
 
-	tc := NewThermocouple(log, bus, 0x60)
+	tc0 := NewThermocouple(log, bus, 0x60, "probe0")
+	tc1 := NewThermocouple(log, bus, 0x60, "probe1")
 
 	cook := gpioreg.ByName("GPIO16")
 	if cook == nil {
@@ -67,7 +69,7 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	go monitorTemp(ctx, &wg, t0, tc, cook)
+	go monitorTemp(ctx, &wg, t0, []*Thermocouple{tc0, tc1}, cook)
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
@@ -84,11 +86,11 @@ func monitorTemp(
 	ctx context.Context,
 	wg *sync.WaitGroup,
 	t0 time.Time,
-	tc *Thermocouple,
+	tcs []*Thermocouple,
 	cook gpio.PinIO,
 ) {
 	ticker := time.NewTicker(250 * time.Millisecond)
-	var data []Point
+	data := make([][]Point, len(tcs))
 
 	for {
 		select {
@@ -97,61 +99,84 @@ func monitorTemp(
 			t := t1.Sub(t0)
 
 			target := profile.Val(t)
+			parts := []string{
+				fmt.Sprintf("t=%3.2f", t),
+				fmt.Sprintf("target=%3.2f", target),
+			}
 
-			temp, err := tc.Temperature()
-			noErr(err)
+			for i, tc := range tcs {
+				temp, err := tc.Temperature()
+				noErr(err)
 
-			data = append(data, Point{
-				Time: Duration(t),
-				Val:  temp,
-			})
+				data[i] = append(data[i], Point{
+					Time: Duration(t),
+					Val:  temp,
+				})
 
+				parts = append(parts, fmt.Sprintf("%s=%3.2f", tc.Description, temp))
+			}
+
+			// use the value of the first probe for control
+			temp := data[0][len(data[0])-1].Val
 			on := target > temp
-			fmt.Println(t.Seconds(), target, temp, on)
 
-			err = cook.Out(gpio.Level(on))
+			parts = append(parts, fmt.Sprintf("on=%v", on))
+			fmt.Println(strings.Join(parts, " "))
+
+			err := cook.Out(gpio.Level(on))
 			noErr(err)
 		case <-ctx.Done():
 			ticker.Stop()
 			_ = cook.Out(gpio.Low)
 			fmt.Println("done")
-			graph(profile, data)
+			graph(profile, tcs, data)
 			wg.Done()
 			return
 		}
 	}
 }
 
-func graph(schedule Schedule, data []Point) {
+func graph(
+	schedule Schedule,
+	tcs []*Thermocouple,
+	data [][]Point,
+) {
 	p := plot.New()
 
 	p.Title.Text = "Reflow Oven Temperature"
 	p.X.Label.Text = "t"
 	p.Y.Label.Text = "Temp"
 
-	var profilePts plotter.XYs
-	for _, d := range schedule {
-		profilePts = append(profilePts, plotter.XY{
-			d.T().Seconds(),
-			d.Val,
-		})
+	{
+		var profilePts plotter.XYs
+		for _, d := range schedule {
+			profilePts = append(profilePts, plotter.XY{
+				d.T().Seconds(),
+				d.Val,
+			})
+		}
+		err := plotutil.AddLines(p,
+			"profile", profilePts,
+		)
+		noErr(err)
 	}
 
-	var dataPts plotter.XYs
-	for _, d := range data {
-		dataPts = append(dataPts, plotter.XY{
-			d.T().Seconds(),
-			d.Val,
-		})
+	for i, tc := range tcs {
+		var dataPts plotter.XYs
+		for _, d := range data[i] {
+			dataPts = append(dataPts, plotter.XY{
+				d.T().Seconds(),
+				d.Val,
+			})
+		}
+
+		err := plotutil.AddLines(p,
+			tc.Description, dataPts,
+		)
+		noErr(err)
 	}
 
-	err := plotutil.AddLines(p,
-		"profile", profilePts,
-		"temp", dataPts,
-	)
-	noErr(err)
-
-	err = p.Save(8*vg.Inch, 4*vg.Inch, "cook.svg")
+	err := p.Save(16*vg.Inch, 4*vg.Inch, "cook.svg")
 	noErr(err)
 }
 

@@ -7,20 +7,23 @@ import (
 )
 
 type Thermocouple struct {
-	log  func(string)
-	i2c  i2c.Bus
-	addr byte
+	log         func(string)
+	i2c         i2c.Bus
+	addr        byte
+	Description string
 }
 
 func NewThermocouple(
 	log func(string),
 	i2c i2c.Bus,
 	addr byte,
+	description string,
 ) *Thermocouple {
 	return &Thermocouple{
-		log:  log,
-		i2c:  i2c,
-		addr: addr,
+		log:         log,
+		i2c:         i2c,
+		addr:        addr,
+		Description: description,
 	}
 }
 
