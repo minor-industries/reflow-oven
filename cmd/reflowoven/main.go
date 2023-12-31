@@ -13,24 +13,16 @@ func main() {
 	_, err := host.Init()
 	noErr(err)
 
-	all := gpioreg.All()
-	fmt.Println(all)
-
 	bus, err := i2creg.Open("1")
 	noErr(err)
 
-	tc := NewThermocouple(func(s string) {
+	log := func(s string) {
 		fmt.Println(s)
-	},
-		bus,
-		0x60,
-	)
+	}
+
+	tc := NewThermocouple(log, bus, 0x60)
 
 	go monitorTemp(tc)
-
-	for _, io := range all {
-		fmt.Println(io.Name())
-	}
 
 	cook := gpioreg.ByName("GPIO16")
 	if cook == nil {
