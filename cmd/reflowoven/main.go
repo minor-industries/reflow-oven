@@ -3,6 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"gonum.org/v1/plot"
+	"gonum.org/v1/plot/plotter"
+	"gonum.org/v1/plot/plotutil"
+	"gonum.org/v1/plot/vg"
 	"os"
 	"os/signal"
 	"periph.io/x/conn/v3/gpio"
@@ -71,6 +75,7 @@ func monitorTemp(
 	cook gpio.PinIO,
 ) {
 	ticker := time.NewTicker(250 * time.Millisecond)
+	var data []Point
 
 	for {
 		select {
@@ -83,6 +88,11 @@ func monitorTemp(
 			temp, err := tc.Temperature()
 			noErr(err)
 
+			data = append(data, Point{
+				Time: Duration(t),
+				Val:  temp,
+			})
+
 			on := target > temp
 			fmt.Println(t, target, temp, on)
 
@@ -92,10 +102,36 @@ func monitorTemp(
 			ticker.Stop()
 			_ = cook.Out(gpio.Low)
 			fmt.Println("done")
+			graph(profile, data)
 			wg.Done()
 			return
 		}
 	}
+}
+
+func graph(schedule Schedule, data []Point) {
+	p := plot.New()
+
+	p.Title.Text = "Reflow Oven Temperature"
+	p.X.Label.Text = "t"
+	p.Y.Label.Text = "Temp"
+
+	var pts plotter.XYs
+
+	for _, d := range data {
+		pts = append(pts, plotter.XY{
+			d.T().Seconds(),
+			d.Val,
+		})
+	}
+
+	err := plotutil.AddLinePoints(p,
+		"temp", pts,
+	)
+	noErr(err)
+
+	err = p.Save(8*vg.Inch, 4*vg.Inch, "cook.svg")
+	noErr(err)
 }
 
 func noErr(err error) {
