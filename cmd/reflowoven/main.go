@@ -18,16 +18,23 @@ import (
 	"time"
 )
 
+//var profile = NewScheduleRelativeDurations([]Point{
+//	{Duration(0 * time.Second), 25},
+//	//{Duration(40 * time.Second), 45}, // preheat the element
+//	{Duration(30 * time.Second), 100},
+//	{Duration(90 * time.Second), 150},
+//	{Duration(30 * time.Second), 183},
+//	{Duration(60 * time.Second), 235},
+//	{Duration(30 * time.Second), 235},
+//	{Duration(25 * time.Second), 183},
+//	{Duration(60 * time.Second), 25},
+//	{Duration(30 * time.Second), 25},
+//})
+
 var profile = NewScheduleRelativeDurations([]Point{
-	{Duration(0 * time.Second), 25},
-	{Duration(40 * time.Second), 45}, // preheat the element
-	{Duration(30 * time.Second), 100},
-	{Duration(90 * time.Second), 150},
-	{Duration(30 * time.Second), 183},
-	{Duration(60 * time.Second), 235},
-	{Duration(30 * time.Second), 235},
-	{Duration(25 * time.Second), 183},
-	{Duration(60 * time.Second), 25},
+	//{Duration(40 * time.Second), 45}, // preheat the element
+	{Duration(0 * time.Second), 238},
+	{Duration(8 * 60 * time.Second), 238},
 	{Duration(30 * time.Second), 25},
 })
 
@@ -35,9 +42,6 @@ func main() {
 	for _, p := range profile {
 		fmt.Println(p.T().Seconds(), p.Val)
 	}
-
-	profile = profile.PrePend(Point{Duration(40 * time.Second), 45})
-	profile = profile.PrePend(Point{Duration(0 * time.Second), 45})
 
 	t0 := time.Now()
 	fmt.Println(t0)
@@ -103,7 +107,7 @@ func monitorTemp(
 			})
 
 			on := target > temp
-			fmt.Println(t, target, temp, on)
+			fmt.Println(t.Seconds(), target, temp, on)
 
 			err = cook.Out(gpio.Level(on))
 			noErr(err)
@@ -141,7 +145,7 @@ func graph(schedule Schedule, data []Point) {
 		})
 	}
 
-	err := plotutil.AddLinePoints(p,
+	err := plotutil.AddLines(p,
 		"profile", profilePts,
 		"temp", dataPts,
 	)
