@@ -34,8 +34,8 @@ import (
 
 var profile = NewScheduleRelativeDurations([]Point{
 	//{Duration(40 * time.Second), 45}, // preheat the element
-	{Duration(0 * time.Second), 238},
-	{Duration(8 * 60 * time.Second), 238},
+	{Duration(0 * time.Second), 235},
+	{Duration(8 * 60 * time.Second), 235},
 	{Duration(30 * time.Second), 25},
 })
 
