@@ -39,3 +39,14 @@ func (sc Schedule) Val(t time.Duration) float64 {
 
 	return val
 }
+
+func (sc Schedule) PrePend(p0 Point) Schedule {
+	result := Schedule{p0}
+
+	for _, p := range sc {
+		t := p.T() + p0.T()
+		result = append(result, Point{Duration(t), p.Val})
+	}
+
+	return result
+}

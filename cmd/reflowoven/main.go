@@ -30,6 +30,9 @@ var profile Schedule = Schedule{
 }
 
 func main() {
+	profile = profile.PrePend(Point{Duration(40 * time.Second), 45})
+	profile = profile.PrePend(Point{Duration(0 * time.Second), 45})
+
 	t0 := time.Now()
 	fmt.Println(t0)
 
