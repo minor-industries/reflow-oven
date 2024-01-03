@@ -19,25 +19,29 @@ import (
 	"time"
 )
 
-//var profile = NewScheduleRelativeDurations([]Point{
-//	{Duration(0 * time.Second), 25},
-//	//{Duration(40 * time.Second), 45}, // preheat the element
-//	{Duration(30 * time.Second), 100},
-//	{Duration(90 * time.Second), 150},
-//	{Duration(30 * time.Second), 183},
-//	{Duration(60 * time.Second), 235},
-//	{Duration(30 * time.Second), 235},
-//	{Duration(25 * time.Second), 183},
-//	{Duration(60 * time.Second), 25},
-//	{Duration(30 * time.Second), 25},
-//})
-
 var profile = NewScheduleRelativeDurations([]Point{
-	//{Duration(40 * time.Second), 45}, // preheat the element
-	{Duration(0 * time.Second), 235},
-	{Duration(8 * 60 * time.Second), 235},
+
+	{Duration(0 * time.Second), 45},
+	{Duration(40 * time.Second), 45}, // preheat the element
+
+	{Duration(0 * time.Second), 25},
+
+	{Duration(30 * time.Second), 100},
+	{Duration(90 * time.Second), 150},
+	{Duration(30 * time.Second), 183},
+	{Duration(60 * time.Second), 235},
+	{Duration(5 * time.Second), 235},
+	{Duration(25 * time.Second), 183},
+	{Duration(30 * time.Second), 25},
 	{Duration(30 * time.Second), 25},
 })
+
+//var profile = NewScheduleRelativeDurations([]Point{
+//	//{Duration(40 * time.Second), 45}, // preheat the element
+//	{Duration(0 * time.Second), 235},
+//	{Duration(5 * 60 * time.Second), 235},
+//	{Duration(30 * time.Second), 25},
+//})
 
 func main() {
 	for _, p := range profile {
@@ -139,7 +143,7 @@ func monitorTemp(
 }
 
 func graph(
-	schedule Schedule,
+	profile Schedule,
 	tcs []*Thermocouple,
 	data [][]Point,
 ) {
@@ -153,7 +157,7 @@ func graph(
 	{
 		vs = append(vs, "profile")
 		var pts plotter.XYs
-		for _, d := range schedule {
+		for _, d := range profile {
 			pts = append(pts, plotter.XY{
 				d.T().Seconds(),
 				d.Val,
