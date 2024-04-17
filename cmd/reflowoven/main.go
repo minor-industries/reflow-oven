@@ -2,12 +2,9 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/minor-industries/codelab/cmd/reflowoven/html"
 	"github.com/minor-industries/rtgraph"
-	"github.com/minor-industries/rtgraph/database"
-	"github.com/minor-industries/rtgraph/schema"
-	"github.com/minor-industries/rtgraph/storage"
+	"github.com/minor-industries/rtgraph/database/inmem"
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/plotutil"
@@ -49,69 +46,15 @@ var profile1 = NewScheduleRelativeDurations([]Point{
 	{Duration(30 * time.Second), 25},
 })
 
-type backend struct {
-	t0            time.Time
-	normalBackend storage.StorageBackend
-	profile       Schedule
-}
-
-func (b backend) getProfile(profileName string) (schema.Series, error) {
-	profile := map[string]Schedule{
-		"reflowoven_profile":   b.profile,
-		"reflowoven_profile_1": profile1,
-		"reflowoven_profile_2": profile2,
-	}[profileName]
-
-	var values []schema.Value
-
-	for _, point := range profile {
-		t := point.T()
-		ts := b.t0.Add(t)
-		values = append(values, schema.Value{
-			Timestamp: ts,
-			Value:     point.Val,
-		})
-	}
-
-	for _, value := range values {
-		fmt.Println(value.Timestamp, value.Value)
-	}
-
-	return schema.Series{
-		SeriesName: profileName,
-		Values:     values,
-	}, nil
-}
-
-func (b backend) LoadDataWindow(seriesName string, start time.Time) (schema.Series, error) {
-	switch seriesName {
-	case "reflowoven_profile_1", "reflowoven_profile_2":
-		return b.getProfile(seriesName)
-	default:
-		return b.normalBackend.LoadDataWindow(seriesName, start)
-	}
-}
-
-func (b backend) CreateSeries(seriesNames []string) error {
-	return nil // TODO?
-}
-
-func (b backend) Insert(objects []any) error {
-	return nil // TODO?
-}
-
 func main() {
 	profile := profile1
-
-	db, err := database.Get(os.ExpandEnv("$HOME/reflowoven.db"))
-	noErr(err)
 
 	t0 := time.Now()
 
 	errCh := make(chan error)
-	be := backend{
+	be := &backend{
 		t0:            t0,
-		normalBackend: &database.Backend{DB: db},
+		normalBackend: inmem.NewBackend(),
 		profile:       profile,
 	}
 	gr, err := rtgraph.New(be, errCh, rtgraph.Opts{}, []string{"reflowoven_temperature"})
