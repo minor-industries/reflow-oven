@@ -1,7 +1,11 @@
 package main
 
-import "testing"
+import (
+	"github.com/stretchr/testify/require"
+	"testing"
+)
 
 func TestProfile(t *testing.T) {
-	graph(profile, nil, nil)
+	err := plot_svg(profile1, nil, nil)
+	require.NoError(t, err)
 }

@@ -88,7 +88,7 @@ func monitorTemp(
 			ticker.Stop()
 			_ = cook.Out(gpio.Low)
 			fmt.Println("done")
-			graph(profile, tcs, data)
+			plot_svg(profile, tcs, data)
 			wg.Done()
 			return
 		}
