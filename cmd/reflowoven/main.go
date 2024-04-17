@@ -19,8 +19,7 @@ import (
 	"time"
 )
 
-var profile = NewScheduleRelativeDurations([]Point{
-
+var profile2 = NewScheduleRelativeDurations([]Point{
 	{Duration(0 * time.Second), 45},
 	{Duration(40 * time.Second), 45}, // preheat the element
 
@@ -36,40 +35,58 @@ var profile = NewScheduleRelativeDurations([]Point{
 	{Duration(30 * time.Second), 25},
 })
 
-//var profile = NewScheduleRelativeDurations([]Point{
-//	//{Duration(40 * time.Second), 45}, // preheat the element
-//	{Duration(0 * time.Second), 235},
-//	{Duration(5 * 60 * time.Second), 235},
-//	{Duration(30 * time.Second), 25},
-//})
+var profile1 = NewScheduleRelativeDurations([]Point{
+	{Duration(0 * time.Second), 60},
+	{Duration(55 * time.Second), 60}, // preheat the element
+
+	{Duration(25 * time.Second), 100},
+	{Duration(90 * time.Second), 150},
+	{Duration(30 * time.Second), 183},
+	{Duration(60 * time.Second), 235},
+	{Duration(5 * time.Second), 235},
+	{Duration(25 * time.Second), 183},
+	{Duration(30 * time.Second), 25},
+	{Duration(30 * time.Second), 25},
+})
 
 type backend struct {
 	t0            time.Time
 	normalBackend storage.StorageBackend
+	profile       Schedule
+}
+
+func (b backend) getProfile(profileName string) (schema.Series, error) {
+	profile := map[string]Schedule{
+		"reflowoven_profile":   b.profile,
+		"reflowoven_profile_1": profile1,
+		"reflowoven_profile_2": profile2,
+	}[profileName]
+
+	var values []schema.Value
+
+	for _, point := range profile {
+		t := point.T()
+		ts := b.t0.Add(t)
+		values = append(values, schema.Value{
+			Timestamp: ts,
+			Value:     point.Val,
+		})
+	}
+
+	for _, value := range values {
+		fmt.Println(value.Timestamp, value.Value)
+	}
+
+	return schema.Series{
+		SeriesName: profileName,
+		Values:     values,
+	}, nil
 }
 
 func (b backend) LoadDataWindow(seriesName string, start time.Time) (schema.Series, error) {
 	switch seriesName {
-	case "reflowoven_profile":
-		var values []schema.Value
-
-		for _, point := range profile {
-			t := point.T()
-			ts := b.t0.Add(t)
-			values = append(values, schema.Value{
-				Timestamp: ts,
-				Value:     point.Val,
-			})
-		}
-
-		for _, value := range values {
-			fmt.Println(value.Timestamp, value.Value)
-		}
-
-		return schema.Series{
-			SeriesName: seriesName,
-			Values:     values,
-		}, nil
+	case "reflowoven_profile_1", "reflowoven_profile_2":
+		return b.getProfile(seriesName)
 	default:
 		return b.normalBackend.LoadDataWindow(seriesName, start)
 	}
@@ -84,9 +101,7 @@ func (b backend) Insert(objects []any) error {
 }
 
 func main() {
-	for _, p := range profile {
-		fmt.Println(p.T().Seconds(), p.Val)
-	}
+	profile := profile1
 
 	db, err := database.Get(os.ExpandEnv("$HOME/reflowoven.db"))
 	noErr(err)
@@ -97,6 +112,7 @@ func main() {
 	be := backend{
 		t0:            t0,
 		normalBackend: &database.Backend{DB: db},
+		profile:       profile,
 	}
 	gr, err := rtgraph.New(be, errCh, rtgraph.Opts{}, []string{"reflowoven_temperature"})
 	noErr(err)
@@ -117,7 +133,7 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	go monitorTemp(ctx, gr, &wg, t0, errCh)
+	go monitorTemp(ctx, gr, &wg, t0, errCh, profile)
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)

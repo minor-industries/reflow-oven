@@ -22,6 +22,7 @@ func monitorTemp(
 	wg *sync.WaitGroup,
 	t0 time.Time,
 	errCh chan error,
+	profile Schedule,
 ) {
 	_, err := host.Init()
 	noErr(err)

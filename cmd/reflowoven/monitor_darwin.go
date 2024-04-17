@@ -15,6 +15,7 @@ func monitorTemp(
 	wg *sync.WaitGroup,
 	t0 time.Time,
 	errCh chan error,
+	profile Schedule,
 ) {
 	ticker := time.NewTicker(250 * time.Millisecond)
 
