@@ -44,21 +44,26 @@ var profile = NewScheduleRelativeDurations([]Point{
 //})
 
 type backend struct {
+	t0            time.Time
 	normalBackend storage.StorageBackend
 }
 
 func (b backend) LoadDataWindow(seriesName string, start time.Time) (schema.Series, error) {
 	switch seriesName {
 	case "reflowoven_profile":
-		now := time.Now()
-
 		var values []schema.Value
 
 		for _, point := range profile {
+			t := point.T()
+			ts := b.t0.Add(t)
 			values = append(values, schema.Value{
-				Timestamp: now.Add(-point.T()),
+				Timestamp: ts,
 				Value:     point.Val,
 			})
+		}
+
+		for _, value := range values {
+			fmt.Println(value.Timestamp, value.Value)
 		}
 
 		return schema.Series{
@@ -86,8 +91,13 @@ func main() {
 	db, err := database.Get(os.ExpandEnv("$HOME/reflowoven.db"))
 	noErr(err)
 
+	t0 := time.Now()
+
 	errCh := make(chan error)
-	be := backend{&database.Backend{DB: db}}
+	be := backend{
+		t0:            t0,
+		normalBackend: &database.Backend{DB: db},
+	}
 	gr, err := rtgraph.New(be, errCh, rtgraph.Opts{}, []string{"reflowoven_temperature"})
 	noErr(err)
 
@@ -103,14 +113,11 @@ func main() {
 		errCh <- gr.RunServer("0.0.0.0:8080")
 	}()
 
-	t0 := time.Now()
-	fmt.Println(t0)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	go monitorTemp(ctx, &wg, t0, errCh)
+	go monitorTemp(ctx, gr, &wg, t0, errCh)
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)

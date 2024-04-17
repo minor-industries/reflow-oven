@@ -1,11 +1,12 @@
 //go:build linux
-// +build linux
 
 package main
 
 import (
 	"context"
 	"fmt"
+	"github.com/minor-industries/rtgraph"
+	"github.com/pkg/errors"
 	"periph.io/x/conn/v3/gpio"
 	"periph.io/x/conn/v3/gpio/gpioreg"
 	"periph.io/x/conn/v3/i2c/i2creg"
@@ -17,9 +18,10 @@ import (
 
 func monitorTemp(
 	ctx context.Context,
+	gr *rtgraph.Graph,
 	wg *sync.WaitGroup,
 	t0 time.Time,
-	ch chan error,
+	errCh chan error,
 ) {
 	_, err := host.Init()
 	noErr(err)
@@ -46,8 +48,7 @@ func monitorTemp(
 
 	for {
 		select {
-		case <-ticker.C:
-			t1 := time.Now()
+		case t1 := <-ticker.C:
 			t := t1.Sub(t0)
 
 			target := profile.Val(t)
@@ -70,6 +71,11 @@ func monitorTemp(
 
 			// use the value of the first probe for control
 			temp := data[0][len(data[0])-1].Val
+
+			if err := gr.CreateValue("reflowoven_temperature", t1, temp); err != nil {
+				fmt.Println("error:", errors.Wrap(err, "adding sample to graph"))
+			}
+
 			on := target > temp
 
 			parts = append(parts, fmt.Sprintf("on=%v", on))

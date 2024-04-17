@@ -23,19 +23,20 @@
         Dygraph.onDOMready(function onDOMready() {
             new Graph(document.getElementById("graphdiv0"), {
                 seriesNames: [
-                    "reflowoven_profile"
+                    "reflowoven_profile",
+                    "reflowoven_temperature",
                 ],
                 ylabel: "temperature (C)",
                 title: "Reflow: {value}",
                 height: 500,
                 windowSize: 5 * minute,
-                labels: ["x", "y1"],
+                labels: ["x", "y1", "y2"],
                 series: {
                     y1: {
                         strokeWidth: 1,
                     }
                 },
-                maxGapMs: 1400,
+                maxGapMs: 5 * minute,
                 disableScroll: true
             });
         });
