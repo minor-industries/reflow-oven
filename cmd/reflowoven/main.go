@@ -37,7 +37,7 @@ var profile2 = NewScheduleRelativeDurations([]Point{
 
 var profile1 = NewScheduleRelativeDurations([]Point{
 	{Duration(0 * time.Second), 60},
-	{Duration(55 * time.Second), 60}, // preheat the element
+	{Duration(40 * time.Second), 60}, // preheat the element
 
 	{Duration(25 * time.Second), 100},
 	{Duration(90 * time.Second), 150},
