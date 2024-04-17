@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/minor-industries/rtgraph/schema"
 	"github.com/minor-industries/rtgraph/storage"
 	"time"
@@ -29,10 +28,6 @@ func (b *backend) getProfile(profileName string) (schema.Series, error) {
 			Timestamp: ts,
 			Value:     point.Val,
 		})
-	}
-
-	for _, value := range values {
-		fmt.Println(value.Timestamp, value.Value)
 	}
 
 	return schema.Series{
