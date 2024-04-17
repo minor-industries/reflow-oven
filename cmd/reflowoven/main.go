@@ -3,17 +3,17 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/minor-industries/codelab/cmd/reflowoven/html"
+	"github.com/minor-industries/rtgraph"
+	"github.com/minor-industries/rtgraph/database"
+	"github.com/minor-industries/rtgraph/schema"
+	"github.com/minor-industries/rtgraph/storage"
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/plotutil"
 	"gonum.org/v1/plot/vg"
 	"os"
 	"os/signal"
-	"periph.io/x/conn/v3/gpio"
-	"periph.io/x/conn/v3/gpio/gpioreg"
-	"periph.io/x/conn/v3/i2c/i2creg"
-	"periph.io/x/host/v3"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -43,39 +43,74 @@ var profile = NewScheduleRelativeDurations([]Point{
 //	{Duration(30 * time.Second), 25},
 //})
 
+type backend struct {
+	normalBackend storage.StorageBackend
+}
+
+func (b backend) LoadDataWindow(seriesName string, start time.Time) (schema.Series, error) {
+	switch seriesName {
+	case "reflowoven_profile":
+		now := time.Now()
+
+		var values []schema.Value
+
+		for _, point := range profile {
+			values = append(values, schema.Value{
+				Timestamp: now.Add(-point.T()),
+				Value:     point.Val,
+			})
+		}
+
+		return schema.Series{
+			SeriesName: seriesName,
+			Values:     values,
+		}, nil
+	default:
+		return b.normalBackend.LoadDataWindow(seriesName, start)
+	}
+}
+
+func (b backend) CreateSeries(seriesNames []string) error {
+	return nil // TODO?
+}
+
+func (b backend) Insert(objects []any) error {
+	return nil // TODO?
+}
+
 func main() {
 	for _, p := range profile {
 		fmt.Println(p.T().Seconds(), p.Val)
 	}
 
+	db, err := database.Get(os.ExpandEnv("$HOME/reflowoven.db"))
+	noErr(err)
+
+	errCh := make(chan error)
+	be := backend{&database.Backend{DB: db}}
+	gr, err := rtgraph.New(be, errCh, rtgraph.Opts{}, []string{"reflowoven_temperature"})
+	noErr(err)
+
+	gr.StaticFiles(html.FS,
+		"index.html", "text/html",
+	)
+
+	go func() {
+		noErr(<-errCh)
+	}()
+
+	go func() {
+		errCh <- gr.RunServer("0.0.0.0:8080")
+	}()
+
 	t0 := time.Now()
 	fmt.Println(t0)
-
-	_, err := host.Init()
-	noErr(err)
-
-	bus, err := i2creg.Open("1")
-	noErr(err)
-
-	log := func(s string) {
-		fmt.Println(s)
-	}
-
-	tcs := []*Thermocouple{
-		NewThermocouple(log, bus, 0x67, "probe0"),
-		//NewThermocouple(log, bus, 0x60, "probe1"),
-	}
-
-	cook := gpioreg.ByName("GPIO16")
-	if cook == nil {
-		panic("no gpio")
-	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	go monitorTemp(ctx, &wg, t0, tcs, cook)
+	go monitorTemp(ctx, &wg, t0, errCh)
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
@@ -86,60 +121,6 @@ func main() {
 	}()
 
 	wg.Wait()
-}
-
-func monitorTemp(
-	ctx context.Context,
-	wg *sync.WaitGroup,
-	t0 time.Time,
-	tcs []*Thermocouple,
-	cook gpio.PinIO,
-) {
-	ticker := time.NewTicker(250 * time.Millisecond)
-	data := make([][]Point, len(tcs))
-
-	for {
-		select {
-		case <-ticker.C:
-			t1 := time.Now()
-			t := t1.Sub(t0)
-
-			target := profile.Val(t)
-			parts := []string{
-				fmt.Sprintf("t=%3.2f", t.Seconds()),
-				fmt.Sprintf("target=%3.2f", target),
-			}
-
-			for i, tc := range tcs {
-				temp, err := tc.Temperature()
-				noErr(err)
-
-				data[i] = append(data[i], Point{
-					Time: Duration(t),
-					Val:  temp,
-				})
-
-				parts = append(parts, fmt.Sprintf("%s=%3.2f", tc.Description, temp))
-			}
-
-			// use the value of the first probe for control
-			temp := data[0][len(data[0])-1].Val
-			on := target > temp
-
-			parts = append(parts, fmt.Sprintf("on=%v", on))
-			fmt.Println(strings.Join(parts, " "))
-
-			err := cook.Out(gpio.Level(on))
-			noErr(err)
-		case <-ctx.Done():
-			ticker.Stop()
-			_ = cook.Out(gpio.Low)
-			fmt.Println("done")
-			graph(profile, tcs, data)
-			wg.Done()
-			return
-		}
-	}
 }
 
 func graph(
