@@ -47,7 +47,7 @@ func run() error {
 	)
 
 	go func() {
-		errCh <- gr.RunServer("0.0.0.0:8081")
+		errCh <- gr.RunServer("0.0.0.0:8080")
 	}()
 
 	ctx, cancel := context.WithCancel(context.Background())
