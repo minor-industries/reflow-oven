@@ -1,4 +1,4 @@
-package main
+package reflow
 
 import (
 	"github.com/pkg/errors"
@@ -21,7 +21,7 @@ func plot_svg(
 
 	var vs []interface{}
 	{
-		vs = append(vs, "profile")
+		vs = append(vs, "Profile")
 		var pts plotter.XYs
 		for _, d := range profile {
 			pts = append(pts, plotter.XY{

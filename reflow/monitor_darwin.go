@@ -1,6 +1,6 @@
 //go:build darwin
 
-package main
+package reflow
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func monitorTemp(
+func MonitorTemp(
 	ctx context.Context,
 	gr *rtgraph.Graph,
 	wg *sync.WaitGroup,

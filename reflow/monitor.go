@@ -1,6 +1,6 @@
 //go:build linux
 
-package main
+package reflow
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-func monitorTemp(
+func MonitorTemp(
 	ctx context.Context,
 	gr *rtgraph.Graph,
 	wg *sync.WaitGroup,
@@ -25,10 +25,16 @@ func monitorTemp(
 	profile Schedule,
 ) {
 	_, err := host.Init()
-	noErr(err)
+	if err != nil {
+		errCh <- errors.Wrap(err, "init host")
+		return
+	}
 
 	bus, err := i2creg.Open("1")
-	noErr(err)
+	if err != nil {
+		errCh <- errors.Wrap(err, "open i2c bus")
+		return
+	}
 
 	log := func(s string) {
 		fmt.Println(s)
@@ -60,7 +66,10 @@ func monitorTemp(
 
 			for i, tc := range tcs {
 				temp, err := tc.Temperature()
-				noErr(err)
+				if err != nil {
+					errCh <- errors.Wrap(err, "read temperature")
+					return
+				}
 
 				data[i] = append(data[i], Point{
 					Time: Duration(t),
@@ -83,7 +92,11 @@ func monitorTemp(
 			fmt.Println(strings.Join(parts, " "))
 
 			err := cook.Out(gpio.Level(on))
-			noErr(err)
+			if err != nil {
+				errCh <- errors.Wrap(err, "gpio level")
+				return
+			}
+
 		case <-ctx.Done():
 			ticker.Stop()
 			_ = cook.Out(gpio.Low)

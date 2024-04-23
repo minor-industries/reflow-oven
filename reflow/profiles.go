@@ -1,8 +1,8 @@
-package main
+package reflow
 
 import "time"
 
-var profile1 = NewScheduleRelativeDurations([]Point{
+var Profile1 = NewScheduleRelativeDurations([]Point{
 	{Duration(0 * time.Second), 60},
 	{Duration(40 * time.Second), 60}, // preheat the element
 
@@ -16,7 +16,7 @@ var profile1 = NewScheduleRelativeDurations([]Point{
 	{Duration(30 * time.Second), 25},
 })
 
-var profile2 = NewScheduleRelativeDurations([]Point{
+var Profile2 = NewScheduleRelativeDurations([]Point{
 	{Duration(0 * time.Second), 45},
 	{Duration(40 * time.Second), 45}, // preheat the element
 

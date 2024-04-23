@@ -3,7 +3,8 @@ package main
 import (
 	"context"
 	"github.com/gin-gonic/gin"
-	"github.com/minor-industries/reflow-oven/cmd/reflowoven/html"
+	"github.com/minor-industries/reflow-oven/html"
+	"github.com/minor-industries/reflow-oven/reflow"
 	"github.com/minor-industries/rtgraph"
 	"github.com/minor-industries/rtgraph/database/inmem"
 	"github.com/pkg/errors"
@@ -18,15 +19,15 @@ import (
 func run() error {
 	gin.SetMode(gin.ReleaseMode)
 
-	profile := profile1
+	profile := reflow.Profile1
 
 	t0 := time.Now()
 
 	errCh := make(chan error)
-	be := &backend{
-		t0:            t0,
-		normalBackend: inmem.NewBackend(),
-		profile:       profile,
+	be := &reflow.Backend{
+		T0:            t0,
+		NormalBackend: inmem.NewBackend(),
+		Profile:       profile,
 	}
 
 	gr, err := rtgraph.New(
@@ -54,7 +55,7 @@ func run() error {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	go monitorTemp(ctx, gr, &wg, t0, errCh, profile)
+	go reflow.MonitorTemp(ctx, gr, &wg, t0, errCh, profile)
 
 	go func() {
 		signals := make(chan os.Signal, 1)
