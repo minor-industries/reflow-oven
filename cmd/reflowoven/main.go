@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"github.com/gin-gonic/gin"
-	"github.com/minor-industries/codelab/cmd/reflowoven/html"
+	"github.com/minor-industries/reflow-oven/cmd/reflowoven/html"
 	"github.com/minor-industries/rtgraph"
 	"github.com/minor-industries/rtgraph/database/inmem"
 	"github.com/pkg/errors"
