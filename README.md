@@ -2,9 +2,9 @@
 
 This is a basic reflow oven for SMT reflow soldering. A real-time temperature graph can be viewed in any web browser.
 
-![reflow oven](https://minor-industries.sfo2.digitaloceanspaces.com/hw/reflow-oven.jpg)
+![reflow oven](docs/reflow-oven.jpg)
 
-![reflow profile](https://minor-industries.sfo2.digitaloceanspaces.com/sw/reflow-oven-with-profile.png)
+![reflow profile](docs/reflow-oven-with-profile.png)
 
 I've had good success building dozens of moderately complex boards using this setup
 with [Chip Quik SMD291AX](https://www.digikey.com/en/products/detail/chip-quik-inc/SMD291AX50T3/5130159). I haven't
